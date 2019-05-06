@@ -1,0 +1,128 @@
+import pandas as pd
+from pandas import ExcelWriter
+from pandas import ExcelFile
+import xlwt
+import urllib2
+import webbrowser
+import re
+import time
+
+n = 74
+status_lookup = ['Grant of patent is intended','The patent has been granted','No opposition filed within time limit','Examination is in progress','The application has been published','Request for examination was made','Patent maintained as amended','Opposition rejected','The application is deemed to be withdrawn','The application has been refused']
+
+xl_file = pd.read_excel('./Data.xlsx','sheet1')
+
+excel_list = xl_file.head(n) #dataframe object
+
+patent_numbers = excel_list['Patent Number']
+
+granted = 0
+pending = 0
+rejected = 0
+patent_numbers_array = []
+filing_year_array = []
+status_array = []
+interpretation_array = []
+for i in range (0,n-1,1):
+	webpage = 'https://register.epo.org/smartSearch?searchMode=smart&query='+patent_numbers[i]
+	patent_numbers_array.append(patent_numbers[i])
+	#webpage = webpage[:-1]
+	content = urllib2.urlopen(webpage).read()
+	time.sleep(60)
+	with open ('content.txt','w') as content_file:
+		content_file.write(content)
+
+	filing_date = re.findall('filing date',content)
+	filing_date_index = content.index(filing_date[0])
+	filing_year = content[filing_date_index+79:filing_date_index+83]
+	print('patent number:',patent_numbers[i])
+	print('filing year:',filing_year)
+	filing_year_array.append(filing_year)
+
+	for line in urllib2.urlopen(webpage).readlines():
+		if re.findall('Status</td>',line):
+			status_line = line
+			break
+
+	for j in range (0,len(status_lookup)-1,1):
+		if re.findall(status_lookup[j],status_line):
+			if re.findall(status_lookup[j],status_line)[0] == status_lookup[0]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Granted')
+				granted = granted + 1
+				interpretation_array.append('Granted')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[1]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Granted')
+				granted = granted + 1
+				interpretation_array.append('Granted')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[2]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Granted')
+				granted = granted + 1
+				interpretation_array.append('Granted')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[3]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Pending')
+				pending = pending + 1
+				interpretation_array.append('Pending')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[4]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Pending')
+				pending = pending + 1
+				interpretation_array.append('Pending')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[5]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Pending')
+				pending = pending + 1
+				interpretation_array.append('Pending')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[6]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Granted')
+				granted = granted + 1
+				interpretation_array.append('Granted')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[7]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Granted')
+				granted = granted + 1
+				interpretation_array.append('Granted')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[8]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Rejected')
+				rejected = rejected + 1
+				interpretation_array.append('Rejected')
+				break
+			elif re.findall(status_lookup[j],status_line)[0] == status_lookup[9]:
+				status_array.append(re.findall(status_lookup[j],status_line)[0])
+				print('Rejected')
+				rejected = rejected + 1
+				interpretation_array.append('Rejected')
+				break
+			else:
+				print ('out of range')
+
+print(patent_numbers_array)
+print(status_array)
+print(interpretation_array)
+print(filing_year_array)
+
+patent_numbers_str_array=[s.encode('ascii')for s in patent_numbers_array]
+print(patent_numbers_str_array)
+
+df = pd.DataFrame({'Patent Number':patent_numbers_str_array,'Status':status_array,'Interpretation':interpretation_array,'Filing Year':filing_year_array},columns=['Patent Number','Status','Interpretation','Filing Year'])
+
+excel_writer = ExcelWriter('Result.xlsx')
+df.to_excel(excel_writer,'sheet2',index=False)
+excel_writer.save()
+
+print('Granted Patent number is ',granted)
+print('Rejected Patent number is ',rejected)
+print('Pending Patent number is ',pending)
